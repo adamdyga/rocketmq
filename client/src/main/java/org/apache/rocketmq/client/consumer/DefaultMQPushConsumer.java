@@ -19,6 +19,9 @@ package org.apache.rocketmq.client.consumer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.consumer.listener.MessageListener;
@@ -262,9 +265,15 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     public DefaultMQPushConsumer(final String consumerGroup, RPCHook rpcHook,
         AllocateMessageQueueStrategy allocateMessageQueueStrategy) {
+        this(consumerGroup, rpcHook, allocateMessageQueueStrategy, null, null);
+    }
+
+    public DefaultMQPushConsumer(final String consumerGroup, RPCHook rpcHook,
+        AllocateMessageQueueStrategy allocateMessageQueueStrategy, ThreadPoolExecutor externalConsumeExecutor,
+            ScheduledExecutorService externalScheduledExecutorService) {
         this.consumerGroup = consumerGroup;
         this.allocateMessageQueueStrategy = allocateMessageQueueStrategy;
-        defaultMQPushConsumerImpl = new DefaultMQPushConsumerImpl(this, rpcHook);
+        defaultMQPushConsumerImpl = new DefaultMQPushConsumerImpl(this, rpcHook, externalConsumeExecutor, externalScheduledExecutorService);
     }
 
     /**

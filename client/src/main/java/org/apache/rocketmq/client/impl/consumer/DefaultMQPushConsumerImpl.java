@@ -27,6 +27,9 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -98,6 +101,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private final long consumerStartTimestamp = System.currentTimeMillis();
     private final ArrayList<ConsumeMessageHook> consumeMessageHookList = new ArrayList<ConsumeMessageHook>();
     private final RPCHook rpcHook;
+    private final ThreadPoolExecutor externalConsumeExecutor;
+    private final ScheduledExecutorService externalScheduledExecutorService;
     private volatile ServiceState serviceState = ServiceState.CREATE_JUST;
     private MQClientInstance mQClientFactory;
     private PullAPIWrapper pullAPIWrapper;
@@ -110,8 +115,15 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     private long queueMaxSpanFlowControlTimes = 0;
 
     public DefaultMQPushConsumerImpl(DefaultMQPushConsumer defaultMQPushConsumer, RPCHook rpcHook) {
+        this(defaultMQPushConsumer, rpcHook, null, null);
+    }
+
+    public DefaultMQPushConsumerImpl(DefaultMQPushConsumer defaultMQPushConsumer, RPCHook rpcHook,
+            ThreadPoolExecutor externalConsumeExecutor, ScheduledExecutorService externalScheduledExecutorService) {
         this.defaultMQPushConsumer = defaultMQPushConsumer;
         this.rpcHook = rpcHook;
+        this.externalConsumeExecutor = externalConsumeExecutor;
+        this.externalScheduledExecutorService = externalScheduledExecutorService;
     }
 
     public void registerFilterMessageHook(final FilterMessageHook hook) {
@@ -596,7 +608,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 if (this.getMessageListenerInner() instanceof MessageListenerOrderly) {
                     this.consumeOrderly = true;
                     this.consumeMessageService =
-                        new ConsumeMessageOrderlyService(this, (MessageListenerOrderly) this.getMessageListenerInner());
+                        new ConsumeMessageOrderlyService(this, (MessageListenerOrderly) this.getMessageListenerInner(),
+                                externalConsumeExecutor, externalScheduledExecutorService);
                 } else if (this.getMessageListenerInner() instanceof MessageListenerConcurrently) {
                     this.consumeOrderly = false;
                     this.consumeMessageService =
